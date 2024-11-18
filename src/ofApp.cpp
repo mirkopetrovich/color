@@ -5,6 +5,11 @@ using namespace cv;
 
 //--------------------------------------------------------------
 void ofApp::setup(){
+    
+    tam_matrix = 560;
+    step = tam_matrix/56;
+    
+#ifdef KINECT
     kinect.setRegistration(true);
     kinect.init(false,false,true);
     kinect.open();
@@ -12,6 +17,7 @@ void ofApp::setup(){
         ofLogNotice() << "kinect: " << kinect.getWidth() << "x" << kinect.getHeight();
     }
     kinect.setCameraTiltAngle(-10); //25
+#endif
     
     gui1.setup();
     gui1.add(minimo.set("min",45, 0, 255));
@@ -20,7 +26,7 @@ void ofApp::setup(){
     gui1.add(lejos.set("umbral lejos",120, 0, 255));   //UMBRAL SALA
     gui1.add(mapx.set("paramX",0,0,55));
     gui1.add(mapy.set("paramY",0,0,55));
-    gui1.add(saturation.set("saturation",0.4,0,2));
+    gui1.add(saturation.set("saturation",0.1,0,2));
     gui1.add(value.set("value",1,0,2));
     gui1.add(grad.set("grad",0.001,0,0.1));
     
@@ -28,6 +34,9 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    
+#ifdef KINECT
+
     kinect.update();
     if (kinect.isFrameNew()) {
         grayImage.setFromPixels(kinect.getDepthPixels());
@@ -48,19 +57,22 @@ void ofApp::update(){
         contourFinder.setSimplify(false);
         
         //players = contourFinder.size();
-        
-      
     }
+#endif
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
+    
+#ifdef KINECT
     int n = contourFinder.size();
 
 if (n) {
     centroid1 = toOf(contourFinder.getCentroid(0));
     
 }
+    
+
     ofPushMatrix();
     ofTranslate(20, 20);
     grayImage.draw(0,0,640,480);
@@ -69,33 +81,61 @@ if (n) {
     ofSetColor(0,255,255);
     ofDrawCircle(centroid1,10);
     ofPopMatrix();
+    
+#endif
     ofSetColor(255);
     gui1.draw();
     
-    float hue ;
-    int tam_matrix = 560;
-    int step = tam_matrix/56;
     
-    ofPushMatrix();
+    if (true) {
+        saturation_old =saturation;
+        ofPushMatrix();
+        ofTranslate(800,20);
+        rosa();
+        ofPopMatrix();
+    }
     
-    ofTranslate(800,20);
-    // step through horizontally
     
+    ofNoFill();
+    ofSetColor(255);
+    
+    
+#ifdef KINECT
+    ofDrawRectangle( floor((centroid1.x/640)*56)*10,floor((centroid1.y/480)*56)*10,10,10 );
+    //ofDrawRectangle((centroid1.x/640)*10,(centroid1.y/480)*10,9,9);
+    ofPopMatrix();
+    ofDrawRectangle( centroid1,10,10 );
+    
+#endif
+    
+    ofFill();
+    ofSetHexColor(0xFFFFFF);
+    ofDrawBitmapString(ofToString(int(mouseX))+
+                       " "+ofToString(int(mouseY)),133,ofGetHeight()-8
+                       );
+    ofDrawBitmapString(ofToString(int(centroid1.x))+
+                       " "+ofToString(int(centroid1.y)),133,ofGetHeight()-20
+                       );
+
+
+
+    
+}
+
+void ofApp::rosa(){
     for ( int i=0; i<tam_matrix; i+=step )
     {
-        // step through vertically
         for ( int j=0; j<tam_matrix; j+=step )
         {
            
-            int radio = 560/2;
+            int radio = tam_matrix/2;
             float p = i-radio;
             int q = j-radio;
             float r = sqrt(p*p+q*q);
             float rad = atan2(q,p);
             hue = ((rad + PI)/(1*PI))*180;
-            float chroma = value*saturation*r*0.0125;
+            float chroma = value*saturation*(sqrt(r));
             float hue1 = hue/60;
-           // float x = chroma*(1-abs((fmod(hue1,2))-1));
             float x = chroma*(1-abs(fmod(hue1,2)-1));
             float m =  value-chroma;
             if (hue1>0 && hue1    <=1) ofSetColor((chroma+m)*255,(x+m)*255,m*255);
@@ -123,59 +163,7 @@ if (n) {
 
         }
     }
-    ofNoFill();
-    ofSetColor(255);
-    
-    ofDrawRectangle( floor((centroid1.x/640)*56)*10,floor((centroid1.y/480)*56)*10,10,10 );
-    //ofDrawRectangle((centroid1.x/640)*10,(centroid1.y/480)*10,9,9);
-    ofPopMatrix();
-    ofDrawRectangle( centroid1,10,10 );
-    
-    //ofDrawRectangle(60,20,640,480);
-
-    // now we will draw a larger rectangle taking the color under the mouse
-
-    // calculate the color under the mouse, using the same calculations as when drawing the grid,
-    // using mouseX and mouseY in place of i and j; draw a rectangle with this color. here we use
-    // ofColor::fromHsb which allows us to set the HSB color in a single line of code.
-   // ofColor color = ofColor::fromHsb(hue,
-                            //         ofMap( mouseX, 0,ofGetWidth(), 0,255 ),
-                             //        ofMap( mouseY, ofGetHeight(),0, 0,255 ) );
-    //ofSetColor( color );
-    //ofFill();
-   // ofDrawRectangle( mouseX, mouseY, 100, 100 );
-    
-
-    // now draw a white border around the rectangle
-    //ofNoFill();
-   // ofSetHexColor(0xFFFFFF);
-   // ofDrawRectangle( mouseX, mouseY, 100, 100 );
-    ofFill();
-
-    // finally we draw text over the rectangle giving the resulting HSB and RGB values
-    // under the mouse
-    ofSetHexColor(0xFFFFFF);
-  /*  ofDrawBitmapString("HSB: "+ofToString(int(hue))+
-                       " "+ofToString(int(color.getSaturation()))+
-                       " "+ofToString(int(color.getBrightness())),
-                       10, ofGetHeight()-13 );
-    ofDrawBitmapString("RGB: "+ofToString(int(color.r))+
-                       " "+ofToString(int(color.g))+
-                       " "+ofToString(int(color.b)),
-                       200, ofGetHeight()-13 );*/
-    
-    ofDrawBitmapString(ofToString(int(mouseX))+
-                       " "+ofToString(int(mouseY)),133,ofGetHeight()-8
-                       );
-    ofDrawBitmapString(ofToString(int(centroid1.x))+
-                       " "+ofToString(int(centroid1.y)),133,ofGetHeight()-20
-                       );
-
-
-
-    
 }
-
 
 //--------------------------------------------------------------
 void ofApp::exit(){
@@ -238,6 +226,8 @@ void ofApp::gotMessage(ofMessage msg){
 }
 
 //--------------------------------------------------------------
-void ofApp::dragEvent(ofDragInfo dragInfo){ 
+void ofApp::dragEvent(ofDragInfo dragInfo){
 
 }
+
+

@@ -1,0 +1,6 @@
+*.DS_*
+*.app*
+*.mp4*
+
+xcuserdata/
+

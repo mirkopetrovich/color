@@ -6,8 +6,11 @@ using namespace cv;
 //--------------------------------------------------------------
 void ofApp::setup(){
     
+    sender.setup(HOST, PORT);
+    
     tam_matrix = 560;
     step = tam_matrix/56;
+    radio = tam_matrix/2;
     
 #ifdef KINECT
     kinect.setRegistration(true);
@@ -26,14 +29,21 @@ void ofApp::setup(){
     gui1.add(lejos.set("umbral lejos",120, 0, 255));   //UMBRAL SALA
     gui1.add(mapx.set("paramX",0,0,55));
     gui1.add(mapy.set("paramY",0,0,55));
-    gui1.add(saturation.set("saturation",0.1,0,2));
+    gui1.add(saturation.set("saturation",1,0,2));
     gui1.add(value.set("value",1,0,2));
-    gui1.add(grad.set("grad",0.001,0,0.1));
+    gui1.add(grad.set("grad",0,0,100));
     
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
+    
+    ofxOscMessage m;
+    m.setAddress("/kinect/rgb");
+    m.addIntArg(col.x);
+    m.addIntArg(col.y);
+    m.addIntArg(col.z);
+    sender.sendMessage(m, false);
     
 #ifdef KINECT
 
@@ -88,11 +98,13 @@ if (n) {
     
     
     if (true) {
-        saturation_old =saturation;
         ofPushMatrix();
         ofTranslate(800,20);
         rosa();
+        ofNoFill();
+        ofDrawRectangle(mapx*10, mapy*10, 10, 10);
         ofPopMatrix();
+    
     }
     
     
@@ -108,14 +120,23 @@ if (n) {
     
 #endif
     
+    col= rgb(mapx,mapy);
+    
+    
     ofFill();
     ofSetHexColor(0xFFFFFF);
-    ofDrawBitmapString(ofToString(int(mouseX))+
-                       " "+ofToString(int(mouseY)),133,ofGetHeight()-8
-                       );
-    ofDrawBitmapString(ofToString(int(centroid1.x))+
-                       " "+ofToString(int(centroid1.y)),133,ofGetHeight()-20
-                       );
+    ofDrawBitmapString(ofToString(int(mouseX))+ " "+ofToString(int(mouseY)),133,ofGetHeight()-8);
+    ofDrawBitmapString("RGB: " + ofToString(col.x)+   " "+ofToString(col.y)+ " " + ofToString(col.z),133,ofGetHeight()-20);
+    ofDrawBitmapString("radio: " + ofToString(radio),133,ofGetHeight()-30);
+    ofDrawBitmapString("grilla: " + ofToString((mapx*10)-radio)+" "+ofToString((mapy*10)-radio),133,ofGetHeight()-40);
+    
+    ofDrawBitmapString("hue: " + ofToString(hue_grilla),133,ofGetHeight()-60);
+
+    
+    ofSetColor(col.x,col.y,col.z);
+    ofDrawRectangle(800, 800, 200, 200);
+   
+    
 
 
 
@@ -127,14 +148,12 @@ void ofApp::rosa(){
     {
         for ( int j=0; j<tam_matrix; j+=step )
         {
-           
-            int radio = tam_matrix/2;
             float p = i-radio;
             int q = j-radio;
             float r = sqrt(p*p+q*q);
             float rad = atan2(q,p);
             hue = ((rad + PI)/(1*PI))*180;
-            float chroma = value*saturation*(sqrt(r));
+            float chroma = value*saturation*(r/(radio));
             float hue1 = hue/60;
             float x = chroma*(1-abs(fmod(hue1,2)-1));
             float m =  value-chroma;
@@ -158,11 +177,41 @@ void ofApp::rosa(){
             
             ofDrawRectangle( i, j, step-1, step-1 );
             ofSetColor(255);
+          
             //ofDrawBitmapString(ofToString(x*255),i,j);
                                
 
         }
     }
+}
+
+glm::vec3 ofApp::rgb(int i, int j) {
+    
+    float p = i*10-radio;
+    int q = j*10-radio;
+    float r = sqrt(p*p+q*q);
+    float rad = atan2(q,p);
+    hue_grilla = ((rad + PI)/(1*PI))*180;
+    float chroma = value*saturation*(r/(radio));
+    float hue1 = hue_grilla/60;
+    float x = chroma*(1-abs(fmod(hue1,2)-1));
+    float m =  value-chroma;
+    if (hue1>0 && hue1    <=1) return glm::vec3((chroma+m)*255,(x+m)*255,m*255);
+    else
+        if (hue1>1 && hue1  <=2) return glm::vec3((x+m)*255,(chroma+m)*255,m*255);
+        else
+            if (hue1>2 && hue1  <=3) return glm::vec3(m*255,(chroma+m)*255,(x+m)*255);
+            else
+                if (hue1>3 && hue1  <=4) return glm::vec3(m*255,(x+m)*255,(chroma+m)*255);
+                else
+                    if (hue1>4 && hue1  <=5) return glm::vec3((x+m)*255,m*255,(chroma+m)*255);
+                    else
+                        if (hue1>5 && hue1  <=6) return glm::vec3((chroma+m)*255,m*255,(x+m)*255);
+                        else return(glm::vec3(255,255,255));
+    
+
+    
+    
 }
 
 //--------------------------------------------------------------

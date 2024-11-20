@@ -5,7 +5,11 @@
 #include "ofxKinect.h"
 #include "ofxOpenCv.h"
 #include "ofxCv.h"
+#include "ofxOsc.h"
 
+
+#define HOST "localhost"
+#define PORT 6666
 //#define KINECT
 
 class ofApp : public ofBaseApp{
@@ -30,6 +34,7 @@ class ofApp : public ofBaseApp{
         void gotMessage(ofMessage msg) override;
         
     void rosa();
+    glm::vec3 rgb(int i, int j);
     
     ofxKinect kinect;
     ofxCvGrayscaleImage mirror;
@@ -43,9 +48,12 @@ class ofApp : public ofBaseApp{
     ofxPanel gui1;
     ofParameter<int> mapx,mapy;
     ofParameter<float> saturation, value, grad;
-    float hue;
-    int tam_matrix, step;
+    float hue, hue_grilla;
+    int tam_matrix, step, radio;
     float saturation_old;
         
+    ofxOscSender sender;
+    
+    glm::vec3 col;
 };
 
